@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AI Number Prediction Dashboard</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link href="https://fonts.googleapis.com/css?family=Roboto+Mono:400,700" rel="stylesheet">
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: 'Roboto Mono', monospace;
+      background: black;
+      color: #00ff41;
+      overflow: hidden;
+    }
+    #matrix-canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .container {
+      position: relative;
+      z-index: 1;
+      padding: 30px;
+      max-width: 480px;
+      margin: 40px auto;
+      background: rgba(0,0,0,0.85);
+      border-radius: 16px;
+      box-shadow: 0 0 30px #00ff4160;
+      min-height: 500px;
+    }
+    h1 {
+      text-align: center;
+      font-weight: bold;
+      color: #0ff;
+      text-shadow: 0 0 6px #00ff41;
+    }
+    .input-row {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+    .quick-btn {
+      border: none;
+      font-size: 1.2em;
+      border-radius: 6px;
+      background: #222;
+      color: #00ff41;
+      width: 36px; height: 36px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .quick-btn:active {
+      background: #00ff4180;
+      color: #fff;
+    }
+    .history {
+      margin: 18px 0;
+      text-align: center;
+      font-size: 1.1em;
+    }
+    .badge {
+      display: inline-block;
+      min-width: 30px;
+      padding: 2px 7px;
+      margin: 2px;
+      border-radius: 5px;
+      font-weight: bold;
+      font-size: 1em;
+    }
+    .red { background: #ff003c; color: #fff;}
+    .green { background: #00ff41; color: #222;}
+    .big { background: #ffc107; color: #222;}
+    .small { background: #2196f3; color: #fff;}
+    .dashboard {
+      margin: 30px 0 0 0;
+      background: #111;
+      border-radius: 10px;
+      padding: 16px 12px;
+      box-shadow: 0 0 8px #00ff4160;
+    }
+    .dashboard-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 1.1em;
+      margin: 8px 0;
+    }
+    .result-bar {
+      margin-top: 24px;
+      text-align: center;
+      font-size: 2em;
+      font-weight: bold;
+      min-height: 44px;
+    }
+    .win { color: #0f0; }
+    .loss { color: #f00; }
+    .jack { color: #ff0; text-shadow: 0 0 10px #ff0; }
+    .overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(10,30,10,0.92);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3em;
+      font-weight: bold;
+      letter-spacing: 2px;
+      z-index: 10;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.4s;
+    }
+    .overlay.show {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .ai-bar {
+      text-align: center;
+      font-size: 1.1em;
+      margin-bottom: 6px;
+    }
+    .ai-badge {
+      background: #0ff;
+      color: #111;
+      padding: 2px 9px;
+      border-radius: 6px;
+      margin: 0 5px;
+      font-weight: bold;
+      font-size: 1.15em;
+    }
+    .reset-btn {
+      margin-left: 16px;
+      border: none;
+      background: #111;
+      color: #ccc;
+      border-radius: 5px;
+      padding: 2px 8px;
+      font-size: 1em;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .reset-btn:hover { background: #222; color: #ff003c;}
+    @media (max-width: 600px) {
+      .container { padding: 7vw; margin: 0; min-height: 80vh;}
+      h1 { font-size: 1.2em; }
+      .dashboard-row { font-size: 0.98em;}
+      .result-bar { font-size: 1.3em;}
+    }
+    #predict-next {
+      margin: 18px auto 0 auto;
+      display: block;
+      background: #111;
+      color: #0ff;
+      border: 2px solid #0ff;
+      border-radius: 6px;
+      font-size: 1.16em;
+      font-family: inherit;
+      font-weight: bold;
+      padding: 7px 30px;
+      cursor: pointer;
+      transition: background 0.18s;
+    }
+    #predict-next:hover { background: #00ff4140; }
+  </style>
+</head>
+<body>
+<canvas id="matrix-canvas"></canvas>
+<div class="container">
+  <h1>AI Number Prediction Dashboard</h1>
+  <div class="input-row" id="quick-input"></div>
+  <div style="text-align:center; margin-bottom:12px;">
+    <input type="number" min="0" max="9" id="num-input" placeholder="0-9" style="width:55px;text-align:center;font-size:1.1em;border-radius:6px;">
+    <button id="submit-btn" style="margin-left:7px; font-size:1.1em;padding:4px 17px; border-radius:6px;border:none;background:#00ff41;color:#222;cursor:pointer;">Enter</button>
+    <button id="reset-btn" class="reset-btn">Reset</button>
+  </div>
+  <button id="predict-next">Show Next Prediction</button>
+  <div class="history" id="history"></div>
+  <div class="dashboard" id="dashboard"></div>
+  <div class="result-bar" id="result-bar"></div>
+</div>
+<div class="overlay" id="overlay"></div>
+<script>
+// === Matrix Falling Code ===
+const canvas = document.getElementById('matrix-canvas');
+const ctx = canvas.getContext('2d');
+let w = window.innerWidth, h = window.innerHeight;
+canvas.width = w; canvas.height = h;
+const fontSize = 18;
+const columns = Math.floor(w / fontSize);
+const drops = Array(columns).fill(1);
+function drawMatrix() {
+  ctx.fillStyle = 'rgba(0,0,0,0.13)';
+  ctx.fillRect(0,0,w,h);
+  ctx.font = fontSize + "px monospace";
+  for(let i=0; i<drops.length; i++) {
+    const text = String.fromCharCode(0x30A0 + Math.random()*96);
+    ctx.fillStyle = '#00ff41';
+    ctx.fillText(text, i*fontSize, drops[i]*fontSize);
+    if(drops[i]*fontSize > h && Math.random()>0.96) drops[i]=0;
+    drops[i]++;
+  }
+}
+setInterval(drawMatrix, 35);
+window.addEventListener('resize', ()=>{w=window.innerWidth;h=window.innerHeight;canvas.width=w;canvas.height=h;});
+
+// === Storage, Classification, and Helpers ===
+const STORAGE_KEY = 'ai_number_results_v4'; // for all-time
+const SESSION_KEY = 'ai_number_past_session_v4'; // for only current session
+
+function loadAllHistory() {
+  try {
+    const data = localStorage.getItem(STORAGE_KEY);
+    if(!data) return [];
+    return JSON.parse(data);
+  } catch(e) { return []; }
+}
+function saveAllHistory(arr) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+}
+function loadSessionHistory() {
+  try {
+    const data = localStorage.getItem(SESSION_KEY);
+    if(!data) return [];
+    return JSON.parse(data);
+  } catch(e) { return []; }
+}
+function saveSessionHistory(arr) {
+  localStorage.setItem(SESSION_KEY, JSON.stringify(arr));
+}
+function clearSessionHistory() {
+  localStorage.removeItem(SESSION_KEY);
+}
+function classify(n) {
+  return {
+    red: n%2===0,
+    green: n%2===1,
+    big: n>=5,
+    small: n<=4,
+    label: n%2===0 ? 'red':'green',
+    size: n>=5 ? 'big':'small',
+    parity: n%2===0 ? 'even' : 'odd'
+  };
+}
+
+// === Pattern-Learning AI Model ===
+class AIModel {
+  constructor() {
+    this.trained = false;
+  }
+  train(data) {
+    if (data.length < 10) {
+      this.trained = false;
+      return;
+    }
+    this.trained = true;
+    this.last10 = data.slice(-10).map(e=>e.num);
+    // Build stats
+    this.stats = {
+      num: Array(10).fill(0),
+      size: {big:0, small:0},
+      parity: {even:0, odd:0},
+      transitions: {}
+    };
+    for(let i=0; i<10; ++i) {
+      const n = this.last10[i];
+      const c = classify(n);
+      this.stats.num[n]++;
+      this.stats.size[c.size]++;
+      this.stats.parity[c.parity]++;
+      if(i>0) {
+        const prev = this.last10[i-1];
+        const key = prev+'-'+n;
+        this.stats.transitions[key] = (this.stats.transitions[key]||0)+1;
+      }
+    }
+    this.nextAfter = {};
+    for(let i=1;i<10;++i) {
+      const prev = this.last10[i-1];
+      const curr = this.last10[i];
+      if(!this.nextAfter[prev]) this.nextAfter[prev] = {};
+      this.nextAfter[prev][curr] = (this.nextAfter[prev][curr]||0)+1;
+    }
+  }
+  predict(data) {
+    if (!this.trained) return { predNum: '-', predSize: '-', predParity: '-' };
+    const last = this.last10[this.last10.length-1];
+    let nextLikely = this.nextAfter[last]||{};
+    let maxTrans = 0, likelyNums=[];
+    for(let n=0;n<=9;++n) {
+      if(nextLikely[n] && nextLikely[n] > maxTrans) {
+        maxTrans = nextLikely[n]; likelyNums=[n];
+      } else if(nextLikely[n] && nextLikely[n] === maxTrans) {
+        likelyNums.push(n);
+      }
+    }
+    let modeNum = this.stats.num.indexOf(Math.max(...this.stats.num));
+    let modeSize = this.stats.size.big > this.stats.size.small ? 'big' : (this.stats.size.big < this.stats.size.small ? 'small' : (Math.random()<0.5?'big':'small'));
+    let modeParity = this.stats.parity.even > this.stats.parity.odd ? 'even' : (this.stats.parity.even < this.stats.parity.odd ? 'odd' : (Math.random()<0.5?'even':'odd'));
+    let candidates = [];
+    if(likelyNums.length>0) {
+      likelyNums.forEach(n=>{
+        let c = classify(n);
+        if(c.size===modeSize && c.parity===modeParity)
+          candidates.push(n);
+      });
+    }
+    if(candidates.length===0 && likelyNums.length>0) candidates = likelyNums;
+    if(candidates.length===0) {
+      for(let n=0;n<=9;n++) {
+        let c = classify(n);
+        if(c.size===modeSize && c.parity===modeParity) candidates.push(n);
+      }
+    }
+    if(candidates.length===0) candidates=[modeNum];
+    let predNum = candidates[Math.floor(Math.random()*candidates.length)];
+    if(this.stats.num.every(v=>v===this.stats.num[0])) predNum = Math.floor(Math.random()*10);
+    return { predNum, predSize: modeSize, predParity: modeParity };
+  }
+  predictFromHistory(hist) {
+    if(hist.length<10) return { predNum:'-', predSize:'-', predParity:'-' };
+    this.train(hist);
+    return this.predict(hist);
+  }
+}
+
+// === UI & Logic ===
+let allHistory = loadAllHistory();
+let sessionHistory = loadSessionHistory();
+const ai = new AIModel();
+
+function updateHistoryUI() {
+  const el = document.getElementById('history');
+  if(sessionHistory.length === 0) el.innerHTML = '';
+  else {
+    el.innerHTML = 'Last 10: ' + sessionHistory.slice(-10).map(e=>{
+      let c = classify(e.num);
+      return `<span class="badge ${c.label} ${c.size}" title="${c.label},${c.size}">${e.num}</span>`;
+    }).join('');
+  }
+}
+function updateDashboardUI(showPrediction = false) {
+  ai.train(sessionHistory);
+  let prediction = ai.predict(sessionHistory);
+  let showPred = ai.trained && showPrediction;
+  let lastActual = '';
+  let lastClass = '';
+  let res = '';
+  let status = '';
+  if (ai.trained && sessionHistory.length > 10 && showPrediction) {
+    lastActual = sessionHistory[sessionHistory.length-1].num;
+    lastClass = classify(lastActual);
+    const prevPred = ai.predictFromHistory(sessionHistory.slice(-11,-1));
+    if(prevPred.predNum === lastActual) {
+      status='jack'; res='JACK 💥';
+    } else if(classify(prevPred.predNum).size === lastClass.size && prevPred.predSize===lastClass.size) {
+      status='win'; res='WIN';
+    } else {
+      status='loss'; res='LOSS';
+    }
+  }
+  document.getElementById('dashboard').innerHTML = ai.trained ? `
+    <div class="dashboard-row">
+      <span>Next AI Prediction:</span>
+      <span>
+        <span class="ai-badge">${prediction.predNum}</span>
+        <span class="badge ${prediction.predSize}">${String(prediction.predSize).toUpperCase()}</span>
+        <span class="badge">${String(prediction.predParity).toUpperCase()}</span>
+      </span>
+    </div>
+    <div class="dashboard-row">
+      <span>Actual Number:</span>
+      <span>${lastActual !== '' ? `<span class="badge ${lastClass.label} ${lastClass.size}">${lastActual}</span>` : '-'}</span>
+    </div>
+    <div class="dashboard-row">
+      <span>Result:</span>
+      <span class="${status}">${res || '-'}</span>
+    </div>
+    <div class="dashboard-row">
+      <span>Session Inputs:</span>
+      <span>${sessionHistory.length}</span>
+    </div>
+    <div class="dashboard-row">
+      <span>Total Inputs (all time):</span>
+      <span>${allHistory.length}</span>
+    </div>
+  ` : `
+    <div class="dashboard-row" style="justify-content:center;">
+      <span>Enter <b>10 past results</b> to start AI prediction.</span>
+    </div>
+    <div class="dashboard-row">
+      <span>Session Inputs:</span>
+      <span>${sessionHistory.length}</span>
+    </div>
+    <div class="dashboard-row">
+      <span>Total Inputs (all time):</span>
+      <span>${allHistory.length}</span>
+    </div>
+  `;
+  document.getElementById('result-bar').innerHTML = res ? `<span class="${status}">${res}</span>` : '';
+  showOverlay(res, status);
+}
+
+function showOverlay(text, status) {
+  const overlay = document.getElementById('overlay');
+  if(!text) { overlay.className='overlay'; overlay.innerHTML=''; return;}
+  overlay.innerHTML = `<span class="${status}">${text}</span>`;
+  overlay.className = 'overlay show';
+  setTimeout(()=>{ overlay.className='overlay'; }, 10000);
+}
+
+function appendHistory(num) {
+  num = Number(num);
+  const entry = {num, ts:Date.now()};
+  allHistory.push(entry);
+  sessionHistory.push(entry);
+  saveAllHistory(allHistory);
+  saveSessionHistory(sessionHistory);
+  updateHistoryUI();
+  updateDashboardUI(true);
+}
+
+function handleInput(num) {
+  if(num==='') return;
+  num = Number(num);
+  if(isNaN(num)||num<0||num>9) return;
+  appendHistory(num);
+  document.getElementById('num-input').value = '';
+  document.getElementById('num-input').focus();
+}
+
+document.getElementById('submit-btn').onclick = ()=>handleInput(document.getElementById('num-input').value);
+document.getElementById('num-input').onkeydown = e=>{
+  if(e.key==='Enter') handleInput(document.getElementById('num-input').value);
+};
+const quickInput = document.getElementById('quick-input');
+for(let i=0;i<=9;i++) {
+  let btn = document.createElement('button');
+  btn.className = 'quick-btn';
+  btn.textContent = i;
+  btn.onclick = ()=>handleInput(i);
+  quickInput.appendChild(btn);
+}
+window.addEventListener('keydown', e=>{
+  if(document.activeElement === document.getElementById('num-input')) return;
+  if(e.key>='0'&&e.key<='9') handleInput(e.key);
+});
+
+// "Show Next Prediction" button
+document.getElementById('predict-next').onclick = function() {
+  ai.train(sessionHistory);
+  let pred = ai.predict(sessionHistory);
+  let el = document.getElementById('result-bar');
+  if(ai.trained) {
+    el.innerHTML = `<span style="color:#0ff;">Next Prediction: <b>${pred.predNum}</b> <span class="badge ${pred.predSize}">${pred.predSize.toUpperCase()}</span> <span class="badge">${pred.predParity.toUpperCase()}</span></span>`;
+  } else {
+    el.innerHTML = `<span style="color:#f00;">Enter at least 10 results first!</span>`;
+  }
+};
+
+// Reset only session (not all-time)
+document.getElementById('reset-btn').onclick = ()=>{
+  clearSessionHistory();
+  sessionHistory = [];
+  updateHistoryUI();
+  updateDashboardUI();
+  showOverlay('SESSION CLEARED', 'loss');
+};
+
+// Initial UI
+updateHistoryUI();
+updateDashboardUI();
+</script>
+</body>
+</html>
